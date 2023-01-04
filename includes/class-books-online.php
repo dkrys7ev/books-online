@@ -115,6 +115,13 @@ class Books_Online {
 	 * @access   public
 	 */
 	public function register_rest_routes() {
+		// Create
+		register_rest_route( 'books/v1', '/book/create', array(
+			'methods'  => 'POST',
+			'callback' => array( $this, 'create_book' ),
+		) );
+
+		// Read
 		register_rest_route( 'books/v1', '/book/get/(?P<book_id>\d+)', array(
 			'methods'  => 'GET',
 			'callback' => array( $this, 'get_book' ),
@@ -124,6 +131,76 @@ class Books_Online {
 			'methods'  => 'GET',
 			'callback' => array( $this, 'get_books' ),
 		) );
+
+		// Update
+		register_rest_route( 'books/v1', '/book/update/(?P<book_id>\d+)', array(
+			'methods'  => 'PUT',
+			'callback' => array( $this, 'update_book' ),
+		) );
+
+		// Delete
+		register_rest_route( 'books/v1', '/book/delete/(?P<book_id>\d+)', array(
+			'methods'  => 'DELETE',
+			'callback' => array( $this, 'delete_book' ),
+		) );
+	}
+
+	/**
+	 * Create a book
+	 *
+	 * @param    $request
+	 * @since    1.0.0
+	 * @access   public
+	 * @return   WP_REST_Response    Contains book post_id
+	 */
+	public function create_book( $request ) {
+		$response    = array();
+		$title       = $request->get_param( 'title' );
+		$description = $request->get_param( 'description' );
+		$genre       = $request->get_param( 'genre' );
+		$author      = $request->get_param( 'author' );
+
+		if ( isset( $title ) && isset( $description ) && isset( $genre ) && isset( $author ) ) {
+			$author_search = new WP_User_Query( array(
+				'search'        => $author,
+				'search_fields' => array( 'display_name' )
+			) );
+
+			if ( ! empty( $author_search->get_results() ) ) {
+				$author    = reset( $author_search->get_results() );
+				$author_id = $author->get('ID');
+			} else {
+				$author_name = explode( ' ', $author );
+				$author_id   = wp_insert_user( array(
+					'user_login'   => sanitize_title( $author ),
+					'user_pass'    => wp_generate_password(),
+					'first_name'   => $author_name[0],
+					'last_name'    => $author_name[1],
+					'display_name' => $author,
+					'role'         => 'author'
+				) );
+			}
+
+			$book_id = wp_insert_post( array(
+				'post_type'    => 'books',
+				'post_title'   => $title,
+				'post_author'  => $author_id,
+				'post_excerpt' => $description,
+				'post_status'  => 'publish',
+			) );
+
+			if ( ! is_wp_error( $book_id ) && ! empty( $book_id ) ) {
+				wp_set_post_terms( $book_id, $genre, 'book_genres' );
+
+				$response['status'] = 200;
+				$response['data']   = (object) array(
+					'success' => true,
+					'book_id' => $book_id
+				);
+			}
+		}
+
+		return new WP_REST_Response( $response );
 	}
 
 	/**
@@ -200,6 +277,121 @@ class Books_Online {
 				);
 			}
 		}
+
+		return new WP_REST_Response( $response );
+	}
+
+	/**
+	 * Update a book
+	 *
+	 * @param    $request
+	 * @since    1.0.0
+	 * @access   public
+	 */
+	public function update_book( $request ) {
+		$response    = array();
+		$book_id     = $request->get_param( 'book_id' );
+		$book_params = array(
+			'post_title'   => 'title',
+			'post_excerpt' => 'description',
+			'post_genres'  => 'genre',
+			'post_author'  => 'author',
+		);
+
+		if ( ! empty( $book_id ) ) {
+			$book_data = array(
+				'ID'        => $book_id,
+				'post_type' => 'books',
+			);
+
+			foreach( $book_params as $args_key => $param_key ) {
+				if ( in_array( $param_key, array( 'title', 'description' ) ) && $value = $request->get_param( $param_key ) ) {
+					$book_data[ $args_key ] = $value;
+
+					continue;
+				}
+
+				if ( $param_key === 'genre' && $value = $request->get_param( $param_key ) ) {
+					wp_set_post_terms( $book_id, $value, 'book_genres' );
+
+					continue;
+				}
+
+				if ( $param_key === 'author' && $value = $request->get_param( $param_key ) ) {
+					$author_search = new WP_User_Query( array(
+						'search'        => $value,
+						'search_fields' => array( 'display_name' )
+					) );
+
+					if ( ! empty( $author_search->get_results() ) ) {
+						$author    = reset( $author_search->get_results() );
+						$author_id = $author->get('ID');
+					} else {
+						$author_name = explode( ' ', $value );
+						$author_id   = wp_insert_user( array(
+							'user_login'   => sanitize_title( $value ),
+							'user_pass'    => wp_generate_password(),
+							'first_name'   => $author_name[0],
+							'last_name'    => $author_name[1],
+							'display_name' => $value,
+							'role'         => 'author'
+						) );
+					}
+
+					$book_data['post_author'] = $author_id;
+
+					continue;
+				}
+			}
+
+			wp_update_post( $book_data );
+
+			$response['status'] = 200;
+			$response['data']   = (object) array(
+				'success' => true,
+				'book_id' => $book_id
+			);
+
+			return new WP_REST_Response( $response );
+		}
+
+		$response['status'] = 404;
+		$response['data']   = (object) array(
+			'success' => false,
+			'message' => 'Book not found!'
+		);
+
+		return new WP_REST_Response( $response );
+	}
+
+	/**
+	 * Delete a book
+	 *
+	 * @param    $request
+	 * @since    1.0.0
+	 * @access   public
+	 */
+	public function delete_book( $request ) {
+		$response = array();
+		$book_id  = $request->get_param( 'book_id' );
+
+		if ( $book_id && ! empty( $book_id ) && get_post_type( $book_id ) === 'books' ) {
+			wp_delete_post( $book_id, true );
+
+			$response['status'] = 200;
+			$response['data']   = (object) array(
+				'success' => true,
+				'message' => 'The book has been deleted successfully.'
+			);
+
+			return new WP_REST_Response( $response );
+		}
+
+		$response['status'] = 404;
+		$response['data']   = (object) array(
+			'success' => false,
+			'message' => 'No book found with the provided ID.'
+		);
 
 		return new WP_REST_Response( $response );
 	}
