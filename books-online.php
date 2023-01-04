@@ -73,10 +73,10 @@ require plugin_dir_path( __FILE__ ) . 'includes/class-books-online.php';
  *
  * @since    1.0.0
  */
-function run_books_online() {
+function init_books_online_plugin() {
 
 	$plugin = new Books_Online();
 	$plugin->run();
 
 }
-run_books_online();
+init_books_online_plugin();
