@@ -33,10 +33,3 @@ if ( ! defined( 'WPINC' ) ) {
  * The core plugin class
  */
 require plugin_dir_path( __FILE__ ) . 'includes/class-books-online.php';
-
-/**
- * Begins execution of the plugin.
- *
- * @since    1.0.0
- */
-new Books_Online();

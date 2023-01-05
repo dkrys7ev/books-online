@@ -1,68 +1,24 @@
 <?php
 
-/**
- * The file that defines the core plugin class
- *
- * A class definition that includes attributes and functions used across both the
- * public-facing side of the site and the admin area.
- *
- * @link       https://books.online
- * @since      1.0.0
- *
- * @package    Books_Online
- * @subpackage Books_Online/includes
- */
-
-/**
- * The core plugin class.
- *
- * This is used to define internationalization, admin-specific hooks, and
- * public-facing site hooks.
- *
- * Also maintains the unique identifier of this plugin as well as the current
- * version of the plugin.
- *
- * @since      1.0.0
- * @package    Books_Online
- * @subpackage Books_Online/includes
- * @author     Danislav Krastev <dkrystev@gmail.com>
- */
-class Books_Online {
-
-	/**
-	 * Define the core functionality of the plugin.
-	 *
-	 * Set the plugin name and the plugin version that can be used throughout the plugin.
-	 * Load the dependencies, define the locale, and set the hooks for the admin area and
-	 * the public-facing side of the site.
-	 *
-	 * @since    1.0.0
-	 */
-	public function __construct() {
-		add_action( 'init', array( $this, 'register_books_cpt' ) );
-		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
-	}
+abstract class Books_Online {
 
 	/**
 	 * Register the Books CPT
-	 *
-	 * @since    1.0.0
-	 * @access   private
 	 */
-	public function register_books_cpt() {
+	public static function register_books_cpt() {
 		register_post_type( 'books', array(
 			'labels' => array(
-				'name'               => __( 'Books', 'crb' ),
-				'singular_name'      => __( 'Book', 'crb' ),
-				'add_new'            => __( 'Add New', 'crb' ),
-				'add_new_item'       => __( 'Add new Book', 'crb' ),
-				'view_item'          => __( 'View Book', 'crb' ),
-				'edit_item'          => __( 'Edit Book', 'crb' ),
-				'new_item'           => __( 'New Book', 'crb' ),
-				'view_item'          => __( 'View Book', 'crb' ),
-				'search_items'       => __( 'Search Books', 'crb' ),
-				'not_found'          => __( 'No Books found', 'crb' ),
-				'not_found_in_trash' => __( 'No Books found in trash', 'crb' ),
+				'name'               => __( 'Books', 'books-online' ),
+				'singular_name'      => __( 'Book', 'books-online' ),
+				'add_new'            => __( 'Add New', 'books-online' ),
+				'add_new_item'       => __( 'Add new Book', 'books-online' ),
+				'view_item'          => __( 'View Book', 'books-online' ),
+				'edit_item'          => __( 'Edit Book', 'books-online' ),
+				'new_item'           => __( 'New Book', 'books-online' ),
+				'view_item'          => __( 'View Book', 'books-online' ),
+				'search_items'       => __( 'Search Books', 'books-online' ),
+				'not_found'          => __( 'No Books found', 'books-online' ),
+				'not_found_in_trash' => __( 'No Books found in trash', 'books-online' ),
 			),
 			'public'              => true,
 			'has_archive'         => false,
@@ -82,22 +38,22 @@ class Books_Online {
 		) );
 
 		register_taxonomy(
-			'book_genres', # Taxonomy name
-			array( 'books' ), # Post Types
-			array( # Arguments
+			'book_genres',
+			array( 'books' ),
+			array(
 				'labels'            => array(
-					'name'              => __( 'Book Genres', 'crb' ),
-					'singular_name'     => __( 'Book Genre', 'crb' ),
-					'search_items'      => __( 'Search Book Genres', 'crb' ),
-					'all_items'         => __( 'All Book Genres', 'crb' ),
-					'parent_item'       => __( 'Parent Book Genre', 'crb' ),
-					'parent_item_colon' => __( 'Parent Book Genre:', 'crb' ),
-					'view_item'         => __( 'View Book Genre', 'crb' ),
-					'edit_item'         => __( 'Edit Book Genre', 'crb' ),
-					'update_item'       => __( 'Update Book Genre', 'crb' ),
-					'add_new_item'      => __( 'Add New Book Genre', 'crb' ),
-					'new_item_name'     => __( 'New Book Genre Name', 'crb' ),
-					'menu_name'         => __( 'Book Genres', 'crb' ),
+					'name'              => __( 'Book Genres', 'books-online' ),
+					'singular_name'     => __( 'Book Genre', 'books-online' ),
+					'search_items'      => __( 'Search Book Genres', 'books-online' ),
+					'all_items'         => __( 'All Book Genres', 'books-online' ),
+					'parent_item'       => __( 'Parent Book Genre', 'books-online' ),
+					'parent_item_colon' => __( 'Parent Book Genre:', 'books-online' ),
+					'view_item'         => __( 'View Book Genre', 'books-online' ),
+					'edit_item'         => __( 'Edit Book Genre', 'books-online' ),
+					'update_item'       => __( 'Update Book Genre', 'books-online' ),
+					'add_new_item'      => __( 'Add New Book Genre', 'books-online' ),
+					'new_item_name'     => __( 'New Book Genre Name', 'books-online' ),
+					'menu_name'         => __( 'Book Genres', 'books-online' ),
 				),
 				'hierarchical'      => false,
 				'show_ui'           => true,
@@ -110,50 +66,42 @@ class Books_Online {
 
 	/**
 	 * Register the REST routes
-	 *
-	 * @since    1.0.0
-	 * @access   public
 	 */
-	public function register_rest_routes() {
+	public static function register_rest_routes() {
 		// Create
 		register_rest_route( 'books/v1', '/book/create', array(
 			'methods'  => 'POST',
-			'callback' => array( $this, 'create_book' ),
+			'callback' => [ 'Books_Online', 'create_book' ],
 		) );
 
 		// Read
 		register_rest_route( 'books/v1', '/book/get/(?P<book_id>\d+)', array(
 			'methods'  => 'GET',
-			'callback' => array( $this, 'get_book' ),
+			'callback' => [ 'Books_Online', 'get_book' ],
 		) );
 
 		register_rest_route( 'books/v1', '/book/get', array(
 			'methods'  => 'GET',
-			'callback' => array( $this, 'get_books' ),
+			'callback' => [ 'Books_Online', 'get_books' ],
 		) );
 
 		// Update
 		register_rest_route( 'books/v1', '/book/update/(?P<book_id>\d+)', array(
 			'methods'  => 'PUT',
-			'callback' => array( $this, 'update_book' ),
+			'callback' => [ 'Books_Online', 'update_book' ],
 		) );
 
 		// Delete
 		register_rest_route( 'books/v1', '/book/delete/(?P<book_id>\d+)', array(
 			'methods'  => 'DELETE',
-			'callback' => array( $this, 'delete_book' ),
+			'callback' => [ 'Books_Online', 'delete_book' ],
 		) );
 	}
 
 	/**
 	 * Create a book
-	 *
-	 * @param    $request
-	 * @since    1.0.0
-	 * @access   public
-	 * @return   WP_REST_Response    Contains book post_id
 	 */
-	public function create_book( $request ) {
+	public static function create_book( $request ) {
 		$response    = array();
 		$title       = $request->get_param( 'title' );
 		$description = $request->get_param( 'description' );
@@ -205,13 +153,8 @@ class Books_Online {
 
 	/**
 	 * Get a book by ID
-	 *
-	 * @param    $request
-	 * @since    1.0.0
-	 * @access   public
-	 * @return   WP_REST_Response    Information about the book
 	 */
-	public function get_book( $request ) {
+	public static function get_book( $request ) {
 		$book_id     = $request->get_param( 'book_id' );
 		$book_genres = wp_get_post_terms( $book_id, 'book_genres', array( 'fields' => 'names' ) );
 		$author_id   = get_post_field( 'post_author', $book_id );
@@ -238,13 +181,8 @@ class Books_Online {
 
 	/**
 	 * Get all books
-	 *
-	 * @param    $request
-	 * @since    1.0.0
-	 * @access   public
-	 * @return   WP_REST_Response    All books
 	 */
-	public function get_books( $request ) {
+	public static function get_books( $request ) {
 		$books = get_posts( array(
 			'post_type'      => 'books',
 			'posts_per_page' => -1,
@@ -283,12 +221,8 @@ class Books_Online {
 
 	/**
 	 * Update a book
-	 *
-	 * @param    $request
-	 * @since    1.0.0
-	 * @access   public
 	 */
-	public function update_book( $request ) {
+	public static function update_book( $request ) {
 		$response    = array();
 		$book_id     = $request->get_param( 'book_id' );
 		$book_params = array(
@@ -366,12 +300,8 @@ class Books_Online {
 
 	/**
 	 * Delete a book
-	 *
-	 * @param    $request
-	 * @since    1.0.0
-	 * @access   public
 	 */
-	public function delete_book( $request ) {
+	public static function delete_book( $request ) {
 		$response = array();
 		$book_id  = $request->get_param( 'book_id' );
 
@@ -396,3 +326,6 @@ class Books_Online {
 		return new WP_REST_Response( $response );
 	}
 }
+
+add_action( 'init', [ 'Books_Online', 'register_books_cpt' ] );
+add_action( 'rest_api_init', [ 'Books_Online', 'register_rest_routes' ] );
