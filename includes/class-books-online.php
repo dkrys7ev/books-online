@@ -111,7 +111,7 @@ abstract class Books_Online {
 		if ( isset( $title ) && isset( $description ) && isset( $genre ) && isset( $author ) ) {
 			$author_search = new WP_User_Query( array(
 				'search'        => $author,
-				'search_fields' => array( 'display_name' )
+				'search_fields' => array( 'display_name' ),
 			) );
 
 			if ( ! empty( $author_search->get_results() ) ) {
@@ -125,7 +125,7 @@ abstract class Books_Online {
 					'first_name'   => $author_name[0],
 					'last_name'    => $author_name[1],
 					'display_name' => $author,
-					'role'         => 'author'
+					'role'         => 'author',
 				) );
 			}
 
@@ -137,16 +137,32 @@ abstract class Books_Online {
 				'post_status'  => 'publish',
 			) );
 
+			$response['status'] = 200;
+
 			if ( ! is_wp_error( $book_id ) && ! empty( $book_id ) ) {
 				wp_set_post_terms( $book_id, $genre, 'book_genres' );
 
-				$response['status'] = 200;
-				$response['data']   = (object) array(
+				$response['data'] = (object) array(
 					'success' => true,
-					'book_id' => $book_id
+					'message' => 'Book created successfully!',
+					'book_id' => $book_id,
+				);
+			} else {
+				$response['data'] = (object) array(
+					'success' => false,
+					'message' => 'Something went wrong. Please, try again.',
 				);
 			}
+
+			return new WP_REST_Response( $response );
 		}
+
+		$response['status'] = 200;
+		$response['data']   = (object) array(
+			'success' => false,
+			'message' => 'Some of the required data is missing. Make sure to include title, description, genre and author.',
+			'book_id' => $book_id,
+		);
 
 		return new WP_REST_Response( $response );
 	}
@@ -155,25 +171,36 @@ abstract class Books_Online {
 	 * Get a book by ID
 	 */
 	public static function get_book( $request ) {
-		$book_id     = $request->get_param( 'book_id' );
-		$book_genres = wp_get_post_terms( $book_id, 'book_genres', array( 'fields' => 'names' ) );
-		$author_id   = get_post_field( 'post_author', $book_id );
-		$first_name  = get_the_author_meta( 'first_name', $author_id );
-		$last_name   = get_the_author_meta( 'last_name', $author_id );
-		$author_name = array(
-			'first_name' => $first_name,
-			'last_name'  => $last_name
-		);
+		$book_id = $request->get_param( 'book_id' );
 
-		if ( is_wp_error( $book_genres ) || empty( $book_genres ) ) {
-			$book_genres = 'N/A';
+		if ( ! empty( $book_id ) && get_post_type( $book_id ) === 'books' ) {
+			$book_genres = wp_get_post_terms( $book_id, 'book_genres', array( 'fields' => 'names' ) );
+			$author_id   = get_post_field( 'post_author', $book_id );
+			$first_name  = get_the_author_meta( 'first_name', $author_id );
+			$last_name   = get_the_author_meta( 'last_name', $author_id );
+			$author_name = array(
+				'first_name' => $first_name,
+				'last_name'  => $last_name
+			);
+
+			if ( is_wp_error( $book_genres ) || empty( $book_genres ) ) {
+				$book_genres = 'N/A';
+			}
+
+			$response = array(
+				'title'       => get_the_title( $book_id ),
+				'description' => get_the_excerpt( $book_id ),
+				'genre'       => $book_genres,
+				'author'      => $author_name,
+			);
+
+			return new WP_REST_Response( $response );
 		}
 
-		$response    = array(
-			'title'       => get_the_title( $book_id ),
-			'description' => get_the_excerpt( $book_id ),
-			'genre'       => $book_genres,
-			'author'      => $author_name,
+		$response['status'] = 404;
+		$response['data']   = (object) array(
+			'success' => false,
+			'message' => 'No book found with the provided ID.'
 		);
 
 		return new WP_REST_Response( $response );
@@ -232,7 +259,7 @@ abstract class Books_Online {
 			'post_author'  => 'author',
 		);
 
-		if ( ! empty( $book_id ) ) {
+		if ( ! empty( $book_id ) && get_post_type( $book_id ) === 'books' ) {
 			$book_data = array(
 				'ID'        => $book_id,
 				'post_type' => 'books',
@@ -292,7 +319,7 @@ abstract class Books_Online {
 		$response['status'] = 404;
 		$response['data']   = (object) array(
 			'success' => false,
-			'message' => 'Book not found!'
+			'message' => 'No book found with the provided ID.'
 		);
 
 		return new WP_REST_Response( $response );
